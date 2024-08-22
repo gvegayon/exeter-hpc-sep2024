@@ -1,11 +1,14 @@
 ---
-title: A Brief Introduction to Using R for High-Performance Computing
+title: A Brief Introduction to High-Performance Computing
+subtitle: With Applications in R
 author: George G. Vega Yon, Ph.D.
 institute: University of Utah, EEUU
 date: 2024-08-23
 format:
     revealjs:
         slide-number: true
+        code-copy: true
+        smaller: true
 bibliography: references.bib
 ---
 
@@ -92,7 +95,7 @@ f(1:4)
 :::
 
 
-## What is parallel computing, anyway?
+## What is parallel computing, anyway? 
 
 ```r
 f <- function(n) n*2
@@ -127,7 +130,25 @@ f_pll(1:4)
 knitr::include_graphics("fig/when_to_parallel.svg")
 ```
 
-## Parallel computing in R 
+## When is it a good idea?
+
+Things that are easily parallelizable:
+
+- Bootstrapping.
+- Cross-validation.
+- Monte Carlo simulations.
+- Multiple MCMC chains.
+
+Things that are not easily parallelizable:
+
+- Regression models.
+- Within Chain MCMC.
+- Matrix Algebra (mostly).
+
+
+# Parallel computing in R {background-color="#515A5A"}
+
+## Parallel computing in R
 
 While there are several alternatives (just take a look at the
 [High-Performance Computing Task View](https://cran.r-project.org/web/views/HighPerformanceComputing.html)),
@@ -149,7 +170,7 @@ programmer not to worry about parallelization, e.g. such as
 [**gpuR**](https://cran.r-project.org/package=gpuR) for Matrix manipulation using
 GPU, [**tensorflow**](https://cran.r-project.org/package=tensorflow)
 
-## {style="width: 80%;margin: auto;height: 80%;"}
+---
 
 And there's also a more advanced set of options
 
@@ -177,7 +198,6 @@ And there's also a more advanced set of options
 
 ## Parallel workflow
 
-
 (Usually) We do the following:
 
 ::: {.fragment}
@@ -203,6 +223,20 @@ And there's also a more advanced set of options
 4.  Stop the cluster with `clusterStop`
 :::
 
+## Types of clusters
+
+```r
+cl <- parallel::makeCluster(4, type = "PSOCK")
+```
+
+| Type | Description | Pros | Cons | 
+|------|-------------|------|------|
+| `PSOCK` | Multiple machines via [socket](https://en.wikipedia.org/w/index.php?title=Network_socket&oldid=1234852476) connection | Works in all OSs | Slowest |
+| `FORK` | Single machine via [forking](https://en.wikipedia.org/w/index.php?title=Fork_(system_call)&oldid=1241385768) | Avoids memory duplication | Only for Unix-based |
+| `MPI`[^mpi] | Multiple machines via [Message Passage Interface](https://en.wikipedia.org/w/index.php?title=Message_Passing_Interface&oldid=1238011288) | Best alternative for HPC clusters | Sometimes hard to setup |
+
+[^mpi]: Requires the [`Rmpi`](https://cran.r-project.org/package=Rmpi) package
+
 ## Ex 1: Hello world!
 
 ```{r}
@@ -227,7 +261,7 @@ stopCluster(cl)
 ```
 
 
-## Ex 2: Parallel regressions {style="width: 80%;margin: auto;height: 80%;"}
+## Ex 2: Parallel regressions 
 
 **Problem**: Run multiple regressions on a very wide dataset. We need to fit the
 following model:
