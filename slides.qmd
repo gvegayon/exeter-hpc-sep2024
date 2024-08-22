@@ -5,10 +5,13 @@ author: George G. Vega Yon, Ph.D.
 institute: University of Utah, EEUU
 date: 2024-08-23
 format:
-    revealjs:
-        slide-number: true
-        code-copy: true
-        smaller: true
+  revealjs:
+    slide-number: true
+    code-copy: true
+    smaller: true
+    fig-format: svg
+    fig-dpi: 200
+    fig-asp: 1
 bibliography: references.bib
 ---
 
@@ -143,8 +146,115 @@ Things that are not easily parallelizable:
 
 - Regression models.
 - Within Chain MCMC.
-- Matrix Algebra (mostly).
+- Matrix Algebra (generally).
+- Any sequential algorithm.
 
+## Overhead cost
+
+::: {style="font-size:80%"}
+- Parallelization is not free: Most cost is in sending+receiving data.
+
+- In R (and other flavors), you can mitigate by (i) reducing the amount of data communicated, and (ii) reducing the number of times you communicate.
+
+- In the following example, we'll see the overhead cost of parallelization. Fitting $y = \alpha + \beta_k X_k + \varepsilon,\quad k = 1, \dots$
+:::
+
+::: {.columns}
+::: {.column width="35%" style="font-size:80%"}
+
+| Run | Description | Data sent | Data received |
+|-----|-------------|-----------|---------------|
+| 1   | Serial      | -  | - |
+| 2   | Parallel full  | $X_k$ column  | Full model |
+| 3   | Parallel coef  | $X_k$ column  | Coefficients |
+| 4   | Parallel coef lite | indices only  | Coefficients |
+
+In the last run, indexing occurs in the cluster side, where all the data is available.
+:::
+::: {.column width="50%"}
+```{r}
+#| label: overhead-cost
+#| cache: true
+#| code-fold: true
+#| echo: true
+
+# Simulating data for the 
+nvars <- c(10, 100, 500, 1000) * 2
+n     <- 2000
+set.seed(331)
+x <- matrix(rnorm(n*max(nvars)), nrow=n)
+y <- rnorm(n)
+
+# Creating the cluster object
+library(parallel)
+cl <- makePSOCKcluster(4)
+clusterExport(cl, c("x", "y", "nvars"))
+
+# Making room
+timing_serial_lm_all <- list()
+timing_parallel_lm_all <- list()
+timing_serial_lm <- list()
+timing_parallel_lm <- list()
+timing_parallel_lm_lite <- list()
+
+# Runs the call and returns the time
+timer <- function(x., fun, cl = NULL) {
+  if (is.null(cl)) {
+    system.time({
+      apply(x., 2, fun, y = y)
+    })
+  } else {
+    system.time({
+      parApply(cl, x., 2, fun, y = y)
+    })
+  }
+}
+
+for (i in seq_along(nvars)) {
+
+  timing_serial_lm_all[[i]] <- timer(x[, 1:nvars[i]], \(x., y) lm(y ~ x.))
+  timing_parallel_lm_all[[i]] <- timer(x[, 1:nvars[i]], \(x., y) lm(y ~ x.), cl)
+
+  timing_serial_lm[[i]] <- timer(x[, 1:nvars[i]], \(x., y) coef(lm(y ~ x.)))
+  timing_parallel_lm[[i]] <- timer(x[, 1:nvars[i]], \(x., y) coef(lm(y ~ x.)), cl)
+
+  timing_parallel_lm_lite[[i]] <-  system.time({
+    parSapply(cl, 1:nvars[i], \(j) coef(lm(y ~ x[,j])))
+  })
+
+}
+stopCluster(cl)
+
+# Preparing the data
+timing_serial_lm<- do.call(rbind, timing_serial_lm) |> data.frame()
+timing_parallel_lm<- do.call(rbind, timing_parallel_lm) |> data.frame()
+
+timing_serial_lm_all<- do.call(rbind, timing_serial_lm_all) |> data.frame()
+timing_parallel_lm_all<- do.call(rbind, timing_parallel_lm_all) |> data.frame()
+
+timing_parallel_lm_lite<- do.call(rbind, timing_parallel_lm_lite) |> data.frame()
+
+# Nice color palette
+palette(hcl.colors(8, "viridis"))
+
+# Visualize
+op <- par(lwd=2, cex=2)
+maxy <- max(c(timing_serial_lm_all[, "elapsed"], timing_parallel_lm_all[, "elapsed"], timing_parallel_lm[, "elapsed"], timing_parallel_lm_lite[, "elapsed"]))
+plot(timing_serial_lm_all[, "elapsed"] ~ nvars, type="b", col=1, pch=19, xlab="Number of variables", ylab="Time (s)", lty=1, ylim=c(0, maxy))
+lines(timing_parallel_lm_all[, "elapsed"] ~ nvars, type="b", col=2, pch=19, lty=2)
+lines(timing_parallel_lm[, "elapsed"] ~ nvars, type="b", col=3, pch=19, lty=3)
+lines(timing_parallel_lm_lite[, "elapsed"] ~ nvars, type="b", col=4, pch=19, lty=4)
+
+legend("topleft", legend=c("Serial", "Parallel: send & retrieve all", "Parallel send all & only get coefs", "Parallel: send once & only get coef"), col=1:4, lty=1:4, bty="n")
+```
+
+```{r}
+#| echo: false
+par(op)
+```
+
+:::
+:::
 
 # Parallel computing in R {background-color="#515A5A"}
 
@@ -225,15 +335,14 @@ And there's also a more advanced set of options
 
 ## Types of clusters
 
-```r
-cl <- parallel::makeCluster(4, type = "PSOCK")
-```
 
 | Type | Description | Pros | Cons | 
 |------|-------------|------|------|
 | `PSOCK` | Multiple machines via [socket](https://en.wikipedia.org/w/index.php?title=Network_socket&oldid=1234852476) connection | Works in all OSs | Slowest |
 | `FORK` | Single machine via [forking](https://en.wikipedia.org/w/index.php?title=Fork_(system_call)&oldid=1241385768) | Avoids memory duplication | Only for Unix-based |
 | `MPI`[^mpi] | Multiple machines via [Message Passage Interface](https://en.wikipedia.org/w/index.php?title=Message_Passing_Interface&oldid=1238011288) | Best alternative for HPC clusters | Sometimes hard to setup |
+
+Using PSOCK, the [`slurmR`](https://cran.r-project.org/package=slurmR){target="_blank"} package creates clusters featuring multiple nodes in HPC environments, think *hundreds of cores*.
 
 [^mpi]: Requires the [`Rmpi`](https://cran.r-project.org/package=Rmpi) package
 
@@ -355,6 +464,91 @@ microbenchmark(
 stopCluster(cl)
 ```
 
+## Ex 3: Bootstrap
+
+```{r}
+#| label: parallel-ex-bootstrap
+#| echo: false
+# Simulating some data
+n <- 100
+k <- 5
+set.seed(33)
+X <- matrix(rnorm(n*k), ncol=k)
+b <- cbind(rnorm(k))
+y <- rbinom(n, 1, prob=plogis(2 + X %*% b))
+# glm(y ~ X, family = binomial("logit")) |> coef()
+```
+
+```{r}
+#| label: parallel-ex-bootstrap-serial
+#| echo: true
+# My personalize bootstrap
+my_boot <- function(y, X, B=1000) {
+
+  # Generating the indices
+  n <- length(y)
+  indices <- sample.int(n = n, size = n * B, replace = TRUE) |>
+    matrix(nrow = n)
+
+  # Fitting the model
+  apply(indices, 2, \(i) {
+    glm(y[i] ~ X[i,], family = binomial("logit")) |>
+      coef()
+  }) |> t()
+
+} 
+set.seed(3312)
+ans <- my_boot(y, X, B=50)
+head(ans)
+```
+
+## Ex 3: Bootstrap (cont'd)
+
+Using the parallel package:
+
+```{r}
+#| label: parallel-ex-bootstrap-parallel
+#| echo: true
+library(parallel)
+
+my_boot_pll <- function(y, X, cl, B=1000) {
+
+  n <- length(y)
+  indices <- sample.int(n = n, size = n * B, replace = TRUE) |>
+    matrix(nrow = n)
+
+  # Making sure y and X are available in the cluster
+  clusterExport(cl, c("y", "X"))
+
+  parApply(cl, indices, 2, \(i) {
+    glm(y[i] ~ X[i,], family = binomial("logit")) |>
+      coef()
+  }) |> t()
+
+}
+
+cl <- makeForkCluster(4)
+set.seed(3312)
+ans_pll <- my_boot_pll(y, X, cl, B=50)
+head(ans_pll)
+```
+
+---
+
+How much faster?
+
+```{r}
+#| label: parallel-ex-bootstrap-bench
+#| echo: true
+#| warning: false
+microbenchmark::microbenchmark(
+  parallel = my_boot_pll(y, X, cl, B=50),
+  serial = my_boot(y, X, B=50),
+  times = 10,
+  unit = "relative"
+)
+stopCluster(cl)
+```
 
 ## {style="text-align:center!important;"}
 
