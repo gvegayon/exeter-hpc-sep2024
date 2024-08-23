@@ -39,32 +39,27 @@ Loosely, from R's perspective, we can think of HPC in terms of two, maybe three 
 
 ::: {.columns layout-align="center"}
 ::: {.column width="33%"}
-Supercomputer (HPC Cluster)
-![The Exascale-class HPE Cray EX Supercomputer at Oak Ridge National Laboratory (fastest as of June 2024)](https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Frontier_Supercomputer_%282%29.jpg/585px-Frontier_Supercomputer_%282%29.jpg)
-:::
-::: {.column width="33%"}
 High Throughput Computing Cluster (HTC Cluster)
 
 ![Open Science Grid Consortium (OSG) <https://osg-htc.org>](fig/OSG_Map.png)
 :::
 ::: {.column width="33%"}
-![](https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/HTCondor_Logo.png/585px-HTCondor_Logo.png)
+Supercomputer (HPC Cluster)
+
+![The Exascale-class HPE Cray EX Supercomputer at Oak Ridge National Laboratory (fastest as of June 2024)](https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Frontier_Supercomputer_%282%29.jpg/585px-Frontier_Supercomputer_%282%29.jpg)
+:::
+::: {.column width="33%"}
+Single Instruction, Multiple Data (SIMD)
+
+![Vadikus, CC BY-SA 4.0 <https://creativecommons.org/licenses/by-sa/4.0>, via Wikimedia Commons](https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/SIMD2.svg/466px-SIMD2.svg.png)
 :::
 :::
 
+**In terms of scale**
 
-
-*   Supercomputer: A **single** big machine with thousands of cores/gpus.
-
-*   High Performance Computing Cluster (HPC Cluster): **Multiple** machines within
-    a **single** network.
-    
-*   High Throughput Computing Cluster (HTC Cluster): **Multiple** machines across **multiple**
-    networks.
-    
-You may not have access to a supercomputer, but certainly HPC/HTC clusters are
-more accesible these days, e.g. AWS provides a service to create HPC clusters
-at a low cost (allegedly, since nobody understands how pricing works)
+::: {layout-align="center"}
+HTC > HPC > Single node > Socket > Core > Thread | SIMD vectorization
+:::
 
 ## What's "a core"? 
 
@@ -78,7 +73,7 @@ How many cores does your computer has?
 parallel::detectCores()
 ```
 
-## What is parallel computing, anyway? 
+## What is parallel computing? 
 
 ```r
 f <- function(n) n*2
@@ -98,7 +93,7 @@ f(1:4)
 :::
 
 
-## What is parallel computing, anyway? 
+## What is parallel computing? 
 
 ```r
 f <- function(n) n*2
@@ -146,8 +141,10 @@ Things that are not easily parallelizable:
 
 - Regression models.
 - Within Chain MCMC.
-- Matrix Algebra (generally).
+- Matrix Algebra (generally)[^whenmatrix].
 - Any sequential algorithm.
+
+[^whenmatrix]: Parallelization of matrix operations is usually done via SIMD instructions, like those in GPUs and some CPUs. Most cases it applies via implicit parallelism (not at the user level).
 
 ## Overhead cost
 
@@ -161,12 +158,9 @@ Things that are not easily parallelizable:
 #| label: overhead-cost
 #| cache: true
 #| echo: false
-#| fig-asp: .6
-#| fig-align: center
-#| fig-cap: "Overhead cost of parallelization: Fitting $y = \\alpha + \\beta_k X_k + \\varepsilon,\\quad k = 1, \\dots$ (more about this later)"
 # Simulating data for the 
-nvars <- c(10, 100, 500, 1000) * 2
-n     <- 2000
+nvars <- c(100, 500, 1000) * 3
+n     <- 10000
 set.seed(331)
 x <- matrix(rnorm(n*max(nvars)), nrow=n)
 y <- rnorm(n)
@@ -191,11 +185,11 @@ timer <- function(x., fun, cl = NULL) {
   if (is.null(cl)) {
     system.time({
       apply(x., 2, fun, y = y)
-    })
+    }) * 1000
   } else {
     system.time({
       parApply(cl, x., 2, fun, y = y)
-    })
+    }) * 1000
   }
 }
 
@@ -208,8 +202,8 @@ for (i in seq_along(nvars)) {
   timing_parallel_lm[[i]] <- timer(x[, 1:nvars[i]], \(x., y) coef(lm(y ~ x.)), cl)
 
   timing_parallel_lm_lite[[i]] <-  system.time({
-    parSapply(cl, 1:nvars[i], \(j) coef(lm(y ~ x[,j])))
-  })
+    mclapply(1:nvars[i], \(j) coef(lm(y ~ x[,j])), mc.cores = 4)
+  }) * 1000
 
 }
 stopCluster(cl)
@@ -222,23 +216,25 @@ timing_serial_lm_all<- do.call(rbind, timing_serial_lm_all) |> data.frame()
 timing_parallel_lm_all<- do.call(rbind, timing_parallel_lm_all) |> data.frame()
 
 timing_parallel_lm_lite<- do.call(rbind, timing_parallel_lm_lite) |> data.frame()
+```
 
+```{r}
+#| echo: false
+#| fig-asp: .6
+#| fig-align: center
+#| fig-cap: "Overhead cost of parallelization: Fitting $y = \\alpha + \\beta_k X_k + \\varepsilon,\\quad k = 1, \\dots$ (more about this later)"
 # Nice color palette
 palette(hcl.colors(8, "viridis"))
 
 # Visualize
 op <- par(lwd=2, cex=1.5, mai = par("mai") * c(1.5,1.5,0,0))
-maxy <- max(c(timing_serial_lm_all[, "elapsed"], timing_parallel_lm_all[, "elapsed"], timing_parallel_lm[, "elapsed"], timing_parallel_lm_lite[, "elapsed"]))
-plot(timing_serial_lm_all[, "elapsed"] ~ nvars, type="b", col=1, pch=19, xlab="Number of variables", ylab="Time (s)", lty=1, ylim=c(0, maxy))
+maxy <- range(c(timing_serial_lm_all[, "elapsed"], timing_parallel_lm_all[, "elapsed"], timing_parallel_lm[, "elapsed"], timing_parallel_lm_lite[, "elapsed"]))
+plot(timing_serial_lm_all[, "elapsed"] ~ nvars, type="b", col=1, pch=19, xlab="Number of variables", ylab="Time (ms) (log-scale)", lty=1, ylim=maxy, log="y")
 lines(timing_parallel_lm_all[, "elapsed"] ~ nvars, type="b", col=2, pch=19, lty=2)
 lines(timing_parallel_lm[, "elapsed"] ~ nvars, type="b", col=3, pch=19, lty=3)
 lines(timing_parallel_lm_lite[, "elapsed"] ~ nvars, type="b", col=4, pch=19, lty=4)
 
 legend("topleft", legend=c("Serial", "Parallel: send & retrieve all", "Parallel send all & only get coefs", "Parallel: send once & only get coef"), col=1:4, lty=1:4, bty="n")
-```
-
-```{r}
-#| echo: false
 par(op)
 ```
 
@@ -337,6 +333,10 @@ And there's also a more advanced set of options
 Using PSOCK, the [`slurmR`](https://cran.r-project.org/package=slurmR){target="_blank"} package creates clusters featuring multiple nodes in HPC environments, think *hundreds of cores*.
 
 [^mpi]: Requires the [`Rmpi`](https://cran.r-project.org/package=Rmpi) package
+
+# Hands-on {background-color="#515A5A"}
+
+![](https://i.imgflip.com/38jiku.jpg){fig-align="center" fig-alt="Emergency broadcat: Your R code will get some seriuos speed boost" width="50%"}
 
 ## Ex 1: Hello world!
 
@@ -563,14 +563,35 @@ parallel::stopCluster(cl)
 
 ## Ex 4: Overhead cost
 
+Problem: Revisit of the overhead cost of parallelization. We want to fit the following model $$y = X_k\beta_k + \varepsilon,\quad k = 1, \dots$$
+
 ```{r}
 #| label: overhead-cost-data
-# Extracting the data
+# Simulating some data
 n <- 1e4
 k <- 3e3
 X <- matrix(rnorm(n*k), ncol=k)
 y <- rnorm(n)
+
+X[1:4, 1:5]
+y[1:6]
 ```
+
+## Ex 4: Overhead cost (cont.)
+
+- Naive approach: run regressions and return the **full** output.
+
+- Problem: The `lm()` function returns a lot of information. Recovering all that information is costly:
+
+```{r}
+#| echo: true
+#| label: overhead-cost-lm
+lm(y ~ X[,1]) |> str()
+```
+
+## Ex 4: Overhead cost - Implementation
+
+Let's compare the cost of getting only the coefficients and minimizing copy via forking:
 
 ```{r}
 #| label: overhead-cost-run
@@ -583,15 +604,9 @@ cost_serial <- system.time(apply(X, 2, \(x, y) lm(y ~ x), y = y))
 cost_pll <- system.time(parApply(cl, X, 2, \(x, y) lm(y ~ x), y = y))
 cost_pll_coef <- system.time(parApply(cl, X, 2, \(x, y) coef(lm(y ~ x)), y = y))
 
-clusterExport(cl, c("X", "y"))
-cost_pll_coef_idx <- system.time({
-  parSapply(cl, 1:ncol(X), \(j) coef(lm(y ~ X[,j])))
-})
-
 # Stopping the cluster
 stopCluster(cl)
 
-# Bonus: Fork cluster (starts and stops on the fly!)
 cost_pll_fork <- system.time({
   mclapply(1:ncol(X), \(j) coef(lm(y ~ X[,j])), mc.cores = 4)
 })
@@ -601,12 +616,12 @@ cost_pll_fork <- system.time({
 #| label: overhead-cost-stop
 data.frame(
   Type = c(
-    "Serial", "Parallel", "Parallel: send all",
-    "Parallel: send once", "Parallel: Fork"
+    "Serial", "Parallel", "Parallel (coef only)",
+    "Parallel fork (coef only)"
     ),
   Elapsed = c(
     cost_serial[3], cost_pll[3], cost_pll_coef[3],
-    cost_pll_coef_idx[3], cost_pll_fork[3]
+    cost_pll_fork[3]
     )
 ) |> t() |> knitr::kable()
 ```
