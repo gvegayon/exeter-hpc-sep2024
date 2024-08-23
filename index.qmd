@@ -13,6 +13,7 @@ format:
     fig-dpi: 200
     fig-asp: 1
 bibliography: references.bib
+embed-resources: true
 ---
 
 # Fundamentals {background-color="#515A5A"}
@@ -41,17 +42,17 @@ Loosely, from R's perspective, we can think of HPC in terms of two, maybe three 
 ::: {.column width="33%"}
 High Throughput Computing Cluster (HTC Cluster)
 
-![Open Science Grid Consortium (OSG) <https://osg-htc.org>](fig/OSG_Map.png)
+![Open Science Grid Consortium (OSG) <https://osg-htc.org>](fig/OSG_Map.png){width=80%}
 :::
 ::: {.column width="33%"}
 Supercomputer (HPC Cluster)
 
-![The Exascale-class HPE Cray EX Supercomputer at Oak Ridge National Laboratory (fastest as of June 2024)](https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Frontier_Supercomputer_%282%29.jpg/585px-Frontier_Supercomputer_%282%29.jpg)
+![The Exascale-class HPE Cray EX Supercomputer at Oak Ridge National Laboratory (fastest as of June 2024)](https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Frontier_Supercomputer_%282%29.jpg/585px-Frontier_Supercomputer_%282%29.jpg){width=80%}
 :::
 ::: {.column width="33%"}
 Single Instruction, Multiple Data (SIMD)
 
-![Vadikus, CC BY-SA 4.0 <https://creativecommons.org/licenses/by-sa/4.0>, via Wikimedia Commons](https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/SIMD2.svg/466px-SIMD2.svg.png)
+![Vadikus, CC BY-SA 4.0 <https://creativecommons.org/licenses/by-sa/4.0>, via Wikimedia Commons](https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/SIMD2.svg/466px-SIMD2.svg.png){width=80%}
 :::
 :::
 
@@ -63,7 +64,7 @@ HTC > HPC > Single node > Socket > Core > Thread | SIMD vectorization
 
 ## What's "a core"? 
 
-![Source: Original figure from LUMI consortium documentation [@lumi2023]](https://raw.githubusercontent.com/gvegayon/appliedhpcr/e33949f25184bed5e84b02c356656782ddd5a46b/fig/socket-core-threads.svg)
+![Source: Original figure from LUMI consortium documentation [@lumi2023]](https://raw.githubusercontent.com/gvegayon/appliedhpcr/e33949f25184bed5e84b02c356656782ddd5a46b/fig/socket-core-threads.svg){width=90% height=400px}
 
 How many cores does your computer has?
 
@@ -124,9 +125,8 @@ f_pll(1:4)
 
 ## When is it a good idea? 
 
-```{r good-idea, echo=FALSE, fig.cap="Ask yourself these questions before jumping into HPC!", fig.align='center', out.width="60%"}
-knitr::include_graphics("fig/when_to_parallel.svg")
-```
+![Ask yourself these questions before jumping into HPC!](fig/when_to_parallel.svg){fig-align="center" fig-alt="Ask yourself these questions before jumping into HPC!" width="70%"}
+
 
 ## When is it a good idea?
 
@@ -195,14 +195,14 @@ timer <- function(x., fun, cl = NULL) {
 
 for (i in seq_along(nvars)) {
 
-  timing_serial_lm_all[[i]] <- timer(x[, 1:nvars[i]], \(x., y) lm(y ~ x.))
-  timing_parallel_lm_all[[i]] <- timer(x[, 1:nvars[i]], \(x., y) lm(y ~ x.), cl)
+  timing_serial_lm_all[[i]] <- timer(x[, 1:nvars[i]], function(x., y) lm(y ~ x.))
+  timing_parallel_lm_all[[i]] <- timer(x[, 1:nvars[i]], function(x., y) lm(y ~ x.), cl)
 
-  timing_serial_lm[[i]] <- timer(x[, 1:nvars[i]], \(x., y) coef(lm(y ~ x.)))
-  timing_parallel_lm[[i]] <- timer(x[, 1:nvars[i]], \(x., y) coef(lm(y ~ x.)), cl)
+  timing_serial_lm[[i]] <- timer(x[, 1:nvars[i]], function(x., y) coef(lm(y ~ x.)))
+  timing_parallel_lm[[i]] <- timer(x[, 1:nvars[i]], function(x., y) coef(lm(y ~ x.)), cl)
 
   timing_parallel_lm_lite[[i]] <-  system.time({
-    mclapply(1:nvars[i], \(j) coef(lm(y ~ x[,j])), mc.cores = 4)
+    mclapply(1:nvars[i], function(j) coef(lm(y ~ x[,j])), mc.cores = 4)
   }) * 1000
 
 }
@@ -227,14 +227,15 @@ timing_parallel_lm_lite<- do.call(rbind, timing_parallel_lm_lite) |> data.frame(
 palette(hcl.colors(8, "viridis"))
 
 # Visualize
-op <- par(lwd=2, cex=1.5, mai = par("mai") * c(1.5,1.5,0,0))
+op <- par(cex=1.5, mai = par("mai") * c(1.5,1.5,0,0))
 maxy <- range(c(timing_serial_lm_all[, "elapsed"], timing_parallel_lm_all[, "elapsed"], timing_parallel_lm[, "elapsed"], timing_parallel_lm_lite[, "elapsed"]))
-plot(timing_serial_lm_all[, "elapsed"] ~ nvars, type="b", col=1, pch=19, xlab="Number of variables", ylab="Time (ms) (log-scale)", lty=1, ylim=maxy, log="y")
-lines(timing_parallel_lm_all[, "elapsed"] ~ nvars, type="b", col=2, pch=19, lty=2)
-lines(timing_parallel_lm[, "elapsed"] ~ nvars, type="b", col=3, pch=19, lty=3)
-lines(timing_parallel_lm_lite[, "elapsed"] ~ nvars, type="b", col=4, pch=19, lty=4)
 
-legend("topleft", legend=c("Serial", "Parallel: send & retrieve all", "Parallel send all & only get coefs", "Parallel: send once & only get coef"), col=1:4, lty=1:4, bty="n")
+plot(timing_serial_lm_all[, "elapsed"] ~ nvars, type="b", col=1, pch=19, xlab="Number of variables", ylab="Time (ms) (log-scale)", lty=1, ylim=maxy, log="y", lwd=4)
+lines(timing_parallel_lm_all[, "elapsed"] ~ nvars, type="b", col=2, pch=19, lty=2, lwd = 4)
+lines(timing_parallel_lm[, "elapsed"] ~ nvars, type="b", col=3, pch=19, lty=3, lwd = 4)
+lines(timing_parallel_lm_lite[, "elapsed"] ~ nvars, type="b", col=4, pch=19, lty=4, lwd = 4)
+
+legend("bottomright", legend=c("Serial", "Naive parallel", "Good parallel", "Best parallel"), col=1:4, lty=1:4, bty="n", lwd=4, cex=1.2)
 par(op)
 ```
 
@@ -398,7 +399,7 @@ ans <- apply(
   
   X      = X,
   MARGIN = 2,
-  FUN    = \(x, y) coef(lm(y ~ x)),
+  FUN    = function(x, y) coef(lm(y ~ x)),
   y      = y
   )
 
@@ -415,7 +416,7 @@ ans <- parallel::parApply(
   cl     = cl,
   X      = X,
   MARGIN = 2,
-  FUN    = \(x, y) coef(lm(y ~ x)),
+  FUN    = function(x, y) coef(lm(y ~ x)),
   y      = y
   )
 
@@ -434,23 +435,17 @@ microbenchmark(
   parallel = parallel::parApply(
     cl  = cl,
     X   = X, MARGIN = 2,
-    FUN = \(x, y) coef(lm(y ~ x)),
+    FUN = function(x, y) coef(lm(y ~ x)),
     y   = y
     ),
   serial = apply(
     X   = X, MARGIN = 2,
-    FUN = \(x, y) coef(lm(y ~ x)),
+    FUN = function(x, y) coef(lm(y ~ x)),
     y   = y
     ),
     times = 10,
     unit = "relative"
 )
-```
-
-```{r}
-#| label: lots-of-lm-stopcluster
-#| cache: false
-#| echo: false
 parallel::stopCluster(cl)
 ```
 
@@ -501,7 +496,7 @@ my_boot <- function(y, X, B=1000) {
 
 
   # Fitting the model
-  apply(indices, 2, \(i) {
+  apply(indices, 2, function(i) {
     glm(y[i] ~ X[i,], family = binomial("logit")) |>
       coef()
   }) |> t()
@@ -530,7 +525,7 @@ my_boot_pll <- function(y, X, cl, B=1000) {
   parallel::clusterExport(cl, c("y", "X"))
 
   # Fitting the model
-  parallel::parApply(cl, indices, 2, \(i) {
+  parallel::parApply(cl, indices, 2, function(i) {
     glm(y[i] ~ X[i,], family = binomial("logit")) |>
       coef()
   }) |> t()
@@ -551,11 +546,12 @@ How much faster?
 #| label: parallel-ex-bootstrap-bench
 #| echo: true
 #| warning: false
+#| cache: true
 microbenchmark::microbenchmark(
-  parallel = my_boot_pll(y, X, cl, B=50),
-  serial   = my_boot(y, X, B=50),
-  times    = 10,
-  unit     = "relative"
+  parallel = my_boot_pll(y, X, cl, B=1000),
+  serial   = my_boot(y, X, B=1000),
+  times    = 1,
+  unit     = "s"
 )
 parallel::stopCluster(cl)
 ```
@@ -600,15 +596,15 @@ library(parallel)
 cl <- makePSOCKcluster(4)
 
 # Running the benchmark
-cost_serial <- system.time(apply(X, 2, \(x, y) lm(y ~ x), y = y))
-cost_pll <- system.time(parApply(cl, X, 2, \(x, y) lm(y ~ x), y = y))
-cost_pll_coef <- system.time(parApply(cl, X, 2, \(x, y) coef(lm(y ~ x)), y = y))
+cost_serial <- system.time(apply(X, 2, function(x, y) lm(y ~ x), y = y))
+cost_pll <- system.time(parApply(cl, X, 2, function(x, y) lm(y ~ x), y = y))
+cost_pll_coef <- system.time(parApply(cl, X, 2, function(x, y) coef(lm(y ~ x)), y = y))
 
 # Stopping the cluster
 stopCluster(cl)
 
 cost_pll_fork <- system.time({
-  mclapply(1:ncol(X), \(j) coef(lm(y ~ X[,j])), mc.cores = 4)
+  mclapply(1:ncol(X), function(j) coef(lm(y ~ X[,j])), mc.cores = 4)
 })
 ```
 
