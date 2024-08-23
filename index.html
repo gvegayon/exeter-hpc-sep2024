@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html lang="en"><head>
-<script src="slides_files/libs/clipboard/clipboard.min.js"></script>
-<script src="slides_files/libs/quarto-html/tabby.min.js"></script>
-<script src="slides_files/libs/quarto-html/popper.min.js"></script>
-<script src="slides_files/libs/quarto-html/tippy.umd.min.js"></script>
-<link href="slides_files/libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="slides_files/libs/quarto-html/light-border.css" rel="stylesheet">
-<link href="slides_files/libs/quarto-html/quarto-html.min.css" rel="stylesheet" data-mode="light">
-<link href="slides_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
-<link href="slides_files/libs/quarto-contrib/fontawesome6-0.1.0/all.css" rel="stylesheet">
-<link href="slides_files/libs/quarto-contrib/fontawesome6-0.1.0/latex-fontsize.css" rel="stylesheet"><meta charset="utf-8">
+<script src="index_files/libs/clipboard/clipboard.min.js"></script>
+<script src="index_files/libs/quarto-html/tabby.min.js"></script>
+<script src="index_files/libs/quarto-html/popper.min.js"></script>
+<script src="index_files/libs/quarto-html/tippy.umd.min.js"></script>
+<link href="index_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="index_files/libs/quarto-html/light-border.css" rel="stylesheet">
+<link href="index_files/libs/quarto-html/quarto-html.min.css" rel="stylesheet" data-mode="light">
+<link href="index_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="index_files/libs/quarto-contrib/fontawesome6-0.1.0/all.css" rel="stylesheet">
+<link href="index_files/libs/quarto-contrib/fontawesome6-0.1.0/latex-fontsize.css" rel="stylesheet"><meta charset="utf-8">
   <meta name="generator" content="quarto-1.5.53">
 
   <meta name="author" content="George G. Vega Yon, Ph.D.">
@@ -18,8 +18,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
-  <link rel="stylesheet" href="slides_files/libs/revealjs/dist/reset.css">
-  <link rel="stylesheet" href="slides_files/libs/revealjs/dist/reveal.css">
+  <link rel="stylesheet" href="index_files/libs/revealjs/dist/reset.css">
+  <link rel="stylesheet" href="index_files/libs/revealjs/dist/reveal.css">
   <style>
     code{white-space: pre-wrap;}
     span.smallcaps{font-variant: small-caps;}
@@ -118,11 +118,11 @@
     div.csl-indent {
       margin-left: 2em;
     }  </style>
-  <link rel="stylesheet" href="slides_files/libs/revealjs/dist/theme/quarto.css">
-  <link href="slides_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
-  <link href="slides_files/libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
-  <link href="slides_files/libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
-  <link href="slides_files/libs/revealjs/plugin/quarto-support/footer.css" rel="stylesheet">
+  <link rel="stylesheet" href="index_files/libs/revealjs/dist/theme/quarto.css">
+  <link href="index_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
+  <link href="index_files/libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
+  <link href="index_files/libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
+  <link href="index_files/libs/revealjs/plugin/quarto-support/footer.css" rel="stylesheet">
   <style type="text/css">
 
   .callout {
@@ -558,7 +558,7 @@ George G. Vega Yon, Ph.D.
 </ul>
 </div>
 
-<img data-src="slides_files/figure-revealjs/unnamed-chunk-3-1.svg" class="r-stretch quarto-figure-center"><p class="caption">Overhead cost of parallelization: Fitting <span class="math inline">\(y = \alpha + \beta_k X_k + \varepsilon,\quad k = 1, \dots\)</span> (more about this later)</p></section></section>
+<img data-src="index_files/figure-revealjs/unnamed-chunk-3-1.svg" class="r-stretch quarto-figure-center"><p class="caption">Overhead cost of parallelization: Fitting <span class="math inline">\(y = \alpha + \beta_k X_k + \varepsilon,\quad k = 1, \dots\)</span> (more about this later)</p></section></section>
 <section>
 <section id="parallel-computing-in-r" class="title-slide slide level1 center" data-background-color="#515A5A">
 <h1>Parallel computing in R</h1>
@@ -692,16 +692,16 @@ George G. Vega Yon, Ph.D.
 <span id="cb5-13"><a href=""></a>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[[1]]
-[1] "Hello from process #99569. x = 20"
+[1] "Hello from process #71166. x = 20"
 
 [[2]]
-[1] "Hello from process #99570. x = 20"
+[1] "Hello from process #71168. x = 20"
 
 [[3]]
-[1] "Hello from process #99567. x = 20"
+[1] "Hello from process #71167. x = 20"
 
 [[4]]
-[1] "Hello from process #99568. x = 20"</code></pre>
+[1] "Hello from process #71169. x = 20"</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href=""></a><span class="co"># 4. STOP THE CLUSTER</span></span>
 <span id="cb7-2"><a href=""></a><span class="fu">stopCluster</span>(cl)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -796,9 +796,9 @@ x           -0.06082548  0.02748265 -0.01327855 -0.08012361 -0.04067826</code></
 <span id="cb18-16"><a href=""></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Unit: relative
-     expr      min       lq     mean   median       uq       max neval cld
- parallel 1.000000 1.000000 1.000000 1.000000 1.000000 1.0000000    10  a 
-   serial 2.846111 2.825279 1.786197 2.788709 2.409329 0.5461332    10   b</code></pre>
+     expr     min       lq     mean   median     uq      max neval cld
+ parallel 1.00000 1.000000 1.000000 1.000000 1.0000 1.000000    10  a 
+   serial 2.70971 2.691232 2.640061 2.655794 2.6153 2.448918    10   b</code></pre>
 </div>
 </div>
 </section>
@@ -913,9 +913,9 @@ P(Y=1) = \text{logit}^{-1}\left(X\beta\right)
 <span id="cb30-6"><a href=""></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Unit: relative
-     expr      min       lq     mean   median       uq      max neval cld
- parallel 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000    10  a 
-   serial 2.645864 2.323571 1.871619 2.170609 1.980968 1.190263    10   b</code></pre>
+     expr      min       lq     mean   median      uq      max neval cld
+ parallel 1.000000 1.000000 1.000000 1.000000 1.00000 1.000000    10  a 
+   serial 2.384683 2.166767 2.029347 2.121597 2.55214 1.237447    10   b</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb32"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href=""></a>parallel<span class="sc">::</span><span class="fu">stopCluster</span>(cl)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
@@ -1044,10 +1044,10 @@ P(Y=1) = \text{logit}^{-1}\left(X\beta\right)
 </tr>
 <tr class="even">
 <td style="text-align: left;">Elapsed</td>
-<td style="text-align: left;">2.742</td>
-<td style="text-align: left;">6.646</td>
-<td style="text-align: left;">1.152</td>
-<td style="text-align: left;">0.650</td>
+<td style="text-align: left;">2.638</td>
+<td style="text-align: left;">6.215</td>
+<td style="text-align: left;">1.157</td>
+<td style="text-align: left;">0.666</td>
 </tr>
 </tbody>
 </table>
@@ -1085,7 +1085,7 @@ P(Y=1) = \text{logit}^{-1}\left(X\beta\right)
 <div class="cell-output-display">
 <div>
 <figure>
-<p><img data-src="slides_files/figure-revealjs/unnamed-chunk-20-1.jpeg" width="300" height="300"></p>
+<p><img data-src="index_files/figure-revealjs/unnamed-chunk-20-1.jpeg" width="300" height="300"></p>
 </figure>
 </div>
 </div>
@@ -1133,9 +1133,9 @@ P(Y=1) = \text{logit}^{-1}\left(X\beta\right)
 <span id="cb39-21"><a href=""></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Unit: relative
-     expr      min       lq     mean   median       uq      max neval cld
- parallel 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000    10  a 
-   serial 2.035776 2.022475 2.016777 2.039532 2.070847 1.956803    10   b</code></pre>
+     expr      min     lq    mean   median       uq      max neval cld
+ parallel 1.000000 1.0000 1.00000 1.000000 1.000000 1.000000    10  a 
+   serial 1.867702 1.8882 1.98731 1.907443 2.290021 2.120476    10   b</code></pre>
 </div>
 </div>
 </section>
@@ -1193,19 +1193,19 @@ LUMI consortium. 2023. <span>“Documentation - Distribution and Binding.”</sp
   </div>
 
   <script>window.backupDefine = window.define; window.define = undefined;</script>
-  <script src="slides_files/libs/revealjs/dist/reveal.js"></script>
+  <script src="index_files/libs/revealjs/dist/reveal.js"></script>
   <!-- reveal.js plugins -->
-  <script src="slides_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.js"></script>
-  <script src="slides_files/libs/revealjs/plugin/pdf-export/pdfexport.js"></script>
-  <script src="slides_files/libs/revealjs/plugin/reveal-menu/menu.js"></script>
-  <script src="slides_files/libs/revealjs/plugin/reveal-menu/quarto-menu.js"></script>
-  <script src="slides_files/libs/revealjs/plugin/quarto-support/support.js"></script>
+  <script src="index_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.js"></script>
+  <script src="index_files/libs/revealjs/plugin/pdf-export/pdfexport.js"></script>
+  <script src="index_files/libs/revealjs/plugin/reveal-menu/menu.js"></script>
+  <script src="index_files/libs/revealjs/plugin/reveal-menu/quarto-menu.js"></script>
+  <script src="index_files/libs/revealjs/plugin/quarto-support/support.js"></script>
   
 
-  <script src="slides_files/libs/revealjs/plugin/notes/notes.js"></script>
-  <script src="slides_files/libs/revealjs/plugin/search/search.js"></script>
-  <script src="slides_files/libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="slides_files/libs/revealjs/plugin/math/math.js"></script>
+  <script src="index_files/libs/revealjs/plugin/notes/notes.js"></script>
+  <script src="index_files/libs/revealjs/plugin/search/search.js"></script>
+  <script src="index_files/libs/revealjs/plugin/zoom/zoom.js"></script>
+  <script src="index_files/libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
