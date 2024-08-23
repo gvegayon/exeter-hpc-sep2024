@@ -89,7 +89,7 @@ f(1:4)
 - 3 idle cores.
 :::
 ::: {.column width="60%"}
-![](fig/pll-computing-explained-serial.svg)
+![](fig/pll-computing-explained-serial.svg){width=80%}
 :::
 :::
 
@@ -110,7 +110,7 @@ f_pll(1:4)
 - 4 times faster.
 :::
 ::: {.column width="60%"}
-![](fig/pll-computing-explained-parallel.svg)
+![](fig/pll-computing-explained-parallel.svg){width=80%}
 :::
 :::
 
@@ -125,7 +125,7 @@ f_pll(1:4)
 
 ## When is it a good idea? 
 
-![Ask yourself these questions before jumping into HPC!](fig/when_to_parallel.svg){fig-align="center" fig-alt="Ask yourself these questions before jumping into HPC!" width="70%"}
+![Ask yourself these questions before jumping into HPC!](fig/when_to_parallel.svg){fig-align="center" fig-alt="Ask yourself these questions before jumping into HPC!" width="65%"}
 
 
 ## When is it a good idea?
