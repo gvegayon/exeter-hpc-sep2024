@@ -155,35 +155,24 @@ Things that are not easily parallelizable:
 - Parallelization is not free: Most cost is in sending+receiving data.
 
 - In R (and other flavors), you can mitigate by (i) reducing the amount of data communicated, and (ii) reducing the number of times you communicate.
-
-- In the following example, we'll see the overhead cost of parallelization. Fitting $y = \alpha + \beta_k X_k + \varepsilon,\quad k = 1, \dots$
 :::
 
-::: {.columns}
-::: {.column width="35%" style="font-size:80%"}
-
-| Run | Description | Data sent | Data received |
-|-----|-------------|-----------|---------------|
-| 1   | Serial      | -  | - |
-| 2   | Parallel full  | $X_k$ column  | Full model |
-| 3   | Parallel coef  | $X_k$ column  | Coefficients |
-| 4   | Parallel coef lite | indices only  | Coefficients |
-
-In the last run, indexing occurs in the cluster side, where all the data is available.
-:::
-::: {.column width="50%"}
 ```{r}
 #| label: overhead-cost
 #| cache: true
-#| code-fold: true
-#| echo: true
-
+#| echo: false
+#| fig-asp: .6
+#| fig-align: center
+#| fig-cap: "Overhead cost of parallelization: Fitting $y = \\alpha + \\beta_k X_k + \\varepsilon,\\quad k = 1, \\dots$ (more about this later)"
 # Simulating data for the 
 nvars <- c(10, 100, 500, 1000) * 2
 n     <- 2000
 set.seed(331)
 x <- matrix(rnorm(n*max(nvars)), nrow=n)
 y <- rnorm(n)
+
+# Saving for later
+dat_overhead <- list(x = x, y = y, nvars = nvars)
 
 # Creating the cluster object
 library(parallel)
@@ -238,7 +227,7 @@ timing_parallel_lm_lite<- do.call(rbind, timing_parallel_lm_lite) |> data.frame(
 palette(hcl.colors(8, "viridis"))
 
 # Visualize
-op <- par(lwd=2, cex=2)
+op <- par(lwd=2, cex=1.5, mai = par("mai") * c(1.5,1.5,0,0))
 maxy <- max(c(timing_serial_lm_all[, "elapsed"], timing_parallel_lm_all[, "elapsed"], timing_parallel_lm[, "elapsed"], timing_parallel_lm_lite[, "elapsed"]))
 plot(timing_serial_lm_all[, "elapsed"] ~ nvars, type="b", col=1, pch=19, xlab="Number of variables", ylab="Time (s)", lty=1, ylim=c(0, maxy))
 lines(timing_parallel_lm_all[, "elapsed"] ~ nvars, type="b", col=2, pch=19, lty=2)
@@ -253,10 +242,10 @@ legend("topleft", legend=c("Serial", "Parallel: send & retrieve all", "Parallel 
 par(op)
 ```
 
-:::
-:::
 
 # Parallel computing in R {background-color="#515A5A"}
+
+![](https://raw.githubusercontent.com/USCbiostats/hpc-with-r/master/fig/spider-toddler.gif){fig-align="center" fig-alt="Spiderman teaching a toddler to walk"}
 
 ## Parallel computing in R
 
@@ -273,7 +262,10 @@ Some examples:
 
 > *   [**future**](https://cran.r-project.org/package=future): '[A] lightweight and
     unified Future API for sequential and parallel processing of R
-    expression via futures.' (won't cover here)
+    expression via futures.'
+
+> *   [**slurmR**](https://cran.r-project.org/package=slurmR): R package for working with
+    the Slurm Workload Manager (by yours truly).
     
 Implicit parallelism, on the other hand, are out-of-the-box tools that allow the
 programmer not to worry about parallelization, e.g. such as
@@ -370,7 +362,7 @@ stopCluster(cl)
 ```
 
 
-## Ex 2: Parallel regressions 
+## Ex 2: Regressions
 
 **Problem**: Run multiple regressions on a very wide dataset. We need to fit the
 following model:
@@ -394,16 +386,14 @@ X[1:6, 1:5]
 str(y)
 ```
 
-## Ex 2: Parallel regressions (cont'd 1) 
-
-**Serial solution**: Use `apply` (forloop) to solve it
+## Ex 2: Regressions - Serial
 
 ```{r}
 #| label: lots-of-lm-serial
 #| echo: true
 #| strip-white: false
-# 
-#
+ 
+ 
 ans <- apply(
   
   X      = X,
@@ -415,16 +405,13 @@ ans <- apply(
 ans[,1:5]
 ```
 
-## Ex 2: Parallel regressions (cont'd 2)
-
-**Parallel solution**: Use `parApply`
+## Ex 2: Regressions - Parallel
 
 ```{r}
 #| label: lots-of-lm-parallel
 #| echo: true
-library(parallel)
-cl <- makePSOCKcluster(4L)
-ans <- parApply(
+cl <- parallel::makePSOCKcluster(4L)
+ans <- parallel::parApply(
   cl     = cl,
   X      = X,
   MARGIN = 2,
@@ -444,7 +431,7 @@ Are we going any faster?
 #| echo: true
 library(microbenchmark)
 microbenchmark(
-  parallel = parApply(
+  parallel = parallel::parApply(
     cl  = cl,
     X   = X, MARGIN = 2,
     FUN = \(x, y) coef(lm(y ~ x)),
@@ -460,11 +447,22 @@ microbenchmark(
 )
 ```
 
-```{r lots-of-lm-stopcluster, cache = TRUE, echo=FALSE}
-stopCluster(cl)
+```{r}
+#| label: lots-of-lm-stopcluster
+#| cache: false
+#| echo: false
+parallel::stopCluster(cl)
 ```
 
 ## Ex 3: Bootstrap
+
+Problem: We want to bootstrap a logistic regression model. We need to fit the
+following model:
+
+$$
+P(Y=1) = \text{logit}^{-1}\left(X\beta\right)
+$$
+
 
 ```{r}
 #| label: parallel-ex-bootstrap
@@ -480,15 +478,27 @@ y <- rbinom(n, 1, prob=plogis(2 + X %*% b))
 ```
 
 ```{r}
+#| label: parallel-ex-bootstrap-data
+#| echo: true
+dim(X)
+head(X)
+y[1:6]
+```
+
+## Ex 3: Bootstrap - Serial
+
+```{r}
 #| label: parallel-ex-bootstrap-serial
 #| echo: true
-# My personalize bootstrap
 my_boot <- function(y, X, B=1000) {
 
   # Generating the indices
   n <- length(y)
   indices <- sample.int(n = n, size = n * B, replace = TRUE) |>
     matrix(nrow = n)
+
+  
+
 
   # Fitting the model
   apply(indices, 2, \(i) {
@@ -497,37 +507,37 @@ my_boot <- function(y, X, B=1000) {
   }) |> t()
 
 } 
+
+
 set.seed(3312)
 ans <- my_boot(y, X, B=50)
 head(ans)
 ```
 
-## Ex 3: Bootstrap (cont'd)
-
-Using the parallel package:
+## Ex 3: Bootstrap - Parallel
 
 ```{r}
 #| label: parallel-ex-bootstrap-parallel
 #| echo: true
-library(parallel)
-
 my_boot_pll <- function(y, X, cl, B=1000) {
 
+  # Generating the indices
   n <- length(y)
   indices <- sample.int(n = n, size = n * B, replace = TRUE) |>
     matrix(nrow = n)
 
   # Making sure y and X are available in the cluster
-  clusterExport(cl, c("y", "X"))
+  parallel::clusterExport(cl, c("y", "X"))
 
-  parApply(cl, indices, 2, \(i) {
+  # Fitting the model
+  parallel::parApply(cl, indices, 2, \(i) {
     glm(y[i] ~ X[i,], family = binomial("logit")) |>
       coef()
   }) |> t()
 
 }
 
-cl <- makeForkCluster(4)
+cl <- parallel::makeForkCluster(4)
 set.seed(3312)
 ans_pll <- my_boot_pll(y, X, cl, B=50)
 head(ans_pll)
@@ -543,11 +553,62 @@ How much faster?
 #| warning: false
 microbenchmark::microbenchmark(
   parallel = my_boot_pll(y, X, cl, B=50),
-  serial = my_boot(y, X, B=50),
-  times = 10,
-  unit = "relative"
+  serial   = my_boot(y, X, B=50),
+  times    = 10,
+  unit     = "relative"
 )
+parallel::stopCluster(cl)
+```
+
+
+## Ex 4: Overhead cost
+
+```{r}
+#| label: overhead-cost-data
+# Extracting the data
+n <- 1e4
+k <- 3e3
+X <- matrix(rnorm(n*k), ncol=k)
+y <- rnorm(n)
+```
+
+```{r}
+#| label: overhead-cost-run
+#| echo: true
+library(parallel)
+cl <- makePSOCKcluster(4)
+
+# Running the benchmark
+cost_serial <- system.time(apply(X, 2, \(x, y) lm(y ~ x), y = y))
+cost_pll <- system.time(parApply(cl, X, 2, \(x, y) lm(y ~ x), y = y))
+cost_pll_coef <- system.time(parApply(cl, X, 2, \(x, y) coef(lm(y ~ x)), y = y))
+
+clusterExport(cl, c("X", "y"))
+cost_pll_coef_idx <- system.time({
+  parSapply(cl, 1:ncol(X), \(j) coef(lm(y ~ X[,j])))
+})
+
+# Stopping the cluster
 stopCluster(cl)
+
+# Bonus: Fork cluster (starts and stops on the fly!)
+cost_pll_fork <- system.time({
+  mclapply(1:ncol(X), \(j) coef(lm(y ~ X[,j])), mc.cores = 4)
+})
+```
+
+```{r}
+#| label: overhead-cost-stop
+data.frame(
+  Type = c(
+    "Serial", "Parallel", "Parallel: send all",
+    "Parallel: send once", "Parallel: Fork"
+    ),
+  Elapsed = c(
+    cost_serial[3], cost_pll[3], cost_pll_coef[3],
+    cost_pll_coef_idx[3], cost_pll_fork[3]
+    )
+) |> t() |> knitr::kable()
 ```
 
 ## {style="text-align:center!important;"}
