@@ -12,6 +12,7 @@ format:
     fig-format: svg
     fig-dpi: 200
     fig-asp: 1
+    theme: solarized
 bibliography: references.bib
 embed-resources: true
 ---
@@ -585,24 +586,46 @@ y[1:6]
 lm(y ~ X[,1]) |> str()
 ```
 
-## Ex 4: Overhead cost - Implementation
+## Ex 4: Overhead cost - Naive
 
-Let's compare the cost of getting only the coefficients and minimizing copy via forking:
+Let's start with the naive approach: fitting the model and returning the full output.
 
 ```{r}
 #| label: overhead-cost-run
 #| echo: true
 library(parallel)
-cl <- makePSOCKcluster(4)
+cost_serial <- system.time(apply(X, 2, function(x, y) lm(y ~ x), y = y))
 
 # Running the benchmark
-cost_serial <- system.time(apply(X, 2, function(x, y) lm(y ~ x), y = y))
+cl <- makePSOCKcluster(4)
 cost_pll <- system.time(parApply(cl, X, 2, function(x, y) lm(y ~ x), y = y))
-cost_pll_coef <- system.time(parApply(cl, X, 2, function(x, y) coef(lm(y ~ x)), y = y))
 
 # Stopping the cluster
 stopCluster(cl)
 
+c(Serial = cost_serial["elapsed"], Parallel = cost_pll["elapsed"])
+```
+
+
+---
+
+
+```{r}
+#| label: overhead-cost-coef-only
+#| echo: true
+
+cl <- makePSOCKcluster(4)
+cost_pll_coef <- system.time(parApply(cl, X, 2, function(x, y) coef(lm(y ~ x)), y = y))
+
+# Stopping the cluster
+stopCluster(cl)
+```
+
+---
+
+```{r}
+#| label: overhead-cost-fork
+#| echo: true
 cost_pll_fork <- system.time({
   mclapply(1:ncol(X), function(j) coef(lm(y ~ X[,j])), mc.cores = 4)
 })
@@ -657,10 +680,19 @@ For more, checkout the [CRAN Task View on HPC](https://cran.r-project.org/web/vi
 
 *   So, we approximate $\pi$ as $\Pr\{\|x\| \leq 1\}\times 2^2$
 
-```{r, echo=FALSE, dev='jpeg', dev.args=list(quality=100), fig.width=6, fig.height=6, out.width='300px', out.height='300px'}
+```{r}
+#| label: pi-simulation
+#| echo: true
 set.seed(1231)
-p    <- matrix(runif(5e3*2, -1, 1), ncol=2)
-pcol <- ifelse(sqrt(rowSums(p^2)) <= 1, adjustcolor("blue", .7), adjustcolor("gray", .7))
+
+p <- matrix(runif(5e3*2, -1, 1), ncol=2)
+
+pcol <- ifelse(
+  sqrt(rowSums(p^2)) <= 1,
+  adjustcolor("blue", .7),
+  adjustcolor("gray", .7)
+  )
+
 plot(p, col=pcol, pch=18)
 ```
 
