@@ -194,6 +194,9 @@ timer <- function(x., fun, cl = NULL) {
   }
 }
 
+x2 <- cbind(1, x)
+clusterExport(cl, c("x2"))
+
 for (i in seq_along(nvars)) {
 
   timing_serial_lm_all[[i]] <- timer(x[, 1:nvars[i]], function(x., y) lm(y ~ x.))
@@ -203,7 +206,7 @@ for (i in seq_along(nvars)) {
   timing_parallel_lm[[i]] <- timer(x[, 1:nvars[i]], function(x., y) coef(lm(y ~ x.)), cl)
 
   timing_parallel_lm_lite[[i]] <-  system.time({
-    mclapply(1:nvars[i], function(j) coef(lm(y ~ x[,j])), mc.cores = 4)
+    mclapply(1:nvars[i], function(j) coef(lm.fit(y = y, x=x2[,c(1,j),drop=FALSE])), mc.cores = 4)
   }) * 1000
 
 }
@@ -649,11 +652,41 @@ data.frame(
 
 The coefficients are much smaller, significantly reducing the overhead cost to about `r format(ncol(X) * object.size(coef(lm(y ~ X[,1]))[1]), units="MB")`.
 
+## EX 4: Overhead cost - Less doing
+
+Finally, since we are only returning the coefficients, we can use a lighter version of `lm` called `lm.fit`.
+
+```{r}
+#| label: overhead-cost-lm-fit-lite
+#| echo: true
+cl <- makePSOCKcluster(4)
+clusterExport(cl, c("X", "y"))
+X1 <- cbind(1, X)
+cost_pll_lite <- system.time(
+  parLapply(cl, 1:ncol(X), function(i) coef(lm.fit(y = y, x=X[,c(1, i),drop=FALSE]))
+  )
+)
+
+# Stopping the cluster
+stopCluster(cl)
+```
+
+```{r}
+#| label: overhead-cost-output-table-lite
+#| echo: false
+data.frame(
+  Serial           = cost_serial["elapsed"],
+  `Parallel naive` = cost_pll["elapsed"],
+  `Parallel coef`  = cost_pll_coef["elapsed"],
+  `Parallel lite`  = cost_pll_lite["elapsed"],
+  row.names = "Elapsed time (s)",
+  check.names = FALSE
+  ) |> t() |> knitr::kable()
+```
+
 ::: {.callout-tip title="Pro-tip"}
 Using a Fork cluster instead of a PSOCK cluster can further reduce the overhead cost. Both `X` and `y` would have been automatically available in the Fork cluster at 0 cost.
 :::
-
-
 
 
 ## {style="text-align:center!important;"}
