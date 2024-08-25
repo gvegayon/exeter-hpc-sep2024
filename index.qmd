@@ -574,17 +574,7 @@ X[1:4, 1:5]
 y[1:6]
 ```
 
-## Ex 4: Overhead cost (cont.)
 
-- Naive approach: run regressions and return the **full** output.
-
-- Problem: The `lm()` function returns a lot of information. Recovering all that information is costly:
-
-```{r}
-#| echo: true
-#| label: overhead-cost-lm
-lm(y ~ X[,1]) |> str()
-```
 
 ## Ex 4: Overhead cost - Naive
 
@@ -593,57 +583,78 @@ Let's start with the naive approach: fitting the model and returning the full ou
 ```{r}
 #| label: overhead-cost-run
 #| echo: true
+#| cache: true
 library(parallel)
-cost_serial <- system.time(apply(X, 2, function(x, y) lm(y ~ x), y = y))
+cost_serial <- system.time(lapply(1:ncol(X), function(i) lm(y ~ X[,i])))
 
 # Running the benchmark
 cl <- makePSOCKcluster(4)
-cost_pll <- system.time(parApply(cl, X, 2, function(x, y) lm(y ~ x), y = y))
+clusterExport(cl, c("X", "y"))
+cost_pll <- system.time(parLapply(cl, 1:ncol(X), function(i) lm(y ~ X[,i])))
 
 # Stopping the cluster
 stopCluster(cl)
-
-c(Serial = cost_serial["elapsed"], Parallel = cost_pll["elapsed"])
 ```
 
+```{r}
+#| label: overhead-cost-output-table-naive
+#| echo: false
+data.frame(
+  Serial           = cost_serial["elapsed"],
+  `Parallel naive` = cost_pll["elapsed"],
+  row.names        = "Elapsed time (s)",
+  check.names      = FALSE
+  ) |> t() |> knitr::kable()
+```
+
+The problem: we are returning a lot of information that we may not need:
+
+```{r}
+#| label: overhead-cost-lm-output
+#| echo: true
+# Approximate size of the output of apply/parApply
+format(ncol(X) * object.size(lm(y ~ X[,1])), units="GB")
+```
 
 ---
 
+## Ex 4: Overhead cost - Less receiving
+
+Instead of capturing the full output, we can just return the coefficients.
 
 ```{r}
 #| label: overhead-cost-coef-only
 #| echo: true
-
 cl <- makePSOCKcluster(4)
-cost_pll_coef <- system.time(parApply(cl, X, 2, function(x, y) coef(lm(y ~ x)), y = y))
+clusterExport(cl, c("X", "y"))
+cost_pll_coef <- system.time(
+  parLapply(cl, 1:ncol(X), function(i) coef(lm(y ~ X[,i])))
+  )
 
 # Stopping the cluster
 stopCluster(cl)
 ```
 
----
-
 ```{r}
-#| label: overhead-cost-fork
-#| echo: true
-cost_pll_fork <- system.time({
-  mclapply(1:ncol(X), function(j) coef(lm(y ~ X[,j])), mc.cores = 4)
-})
-```
-
-```{r}
-#| label: overhead-cost-stop
+#| label: overhead-cost-output-table-coef
+#| echo: false
 data.frame(
-  Type = c(
-    "Serial", "Parallel", "Parallel (coef only)",
-    "Parallel fork (coef only)"
-    ),
-  Elapsed = c(
-    cost_serial[3], cost_pll[3], cost_pll_coef[3],
-    cost_pll_fork[3]
-    )
-) |> t() |> knitr::kable()
+  Serial           = cost_serial["elapsed"],
+  `Parallel naive` = cost_pll["elapsed"],
+  `Parallel coef`  = cost_pll_coef["elapsed"],
+  row.names = "Elapsed time (s)",
+  check.names = FALSE
+  ) |> t() |> knitr::kable()
 ```
+
+The coefficients are much smaller, significantly reducing the overhead cost to about `r format(ncol(X) * object.size(coef(lm(y ~ X[,1]))[1]), units="MB")`.
+
+::: {.callout-tip title="Pro-tip"}
+Using a Fork cluster instead of a PSOCK cluster can further reduce the overhead cost. Both `X` and `y` would have been automatically available in the Fork cluster at 0 cost.
+:::
+
+
+
 
 ## {style="text-align:center!important;"}
 
