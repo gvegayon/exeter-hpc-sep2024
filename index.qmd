@@ -577,7 +577,9 @@ X[1:4, 1:5]
 y[1:6]
 ```
 
-
+::: {.callout-important}
+For this exercise only, we are excluding the time required to setup and stop the cluster. Those times are usually negligible for large computations but are also part of the overhead cost.
+:::
 
 ## Ex 4: Overhead cost - Naive
 
@@ -654,23 +656,24 @@ The coefficients are much smaller, significantly reducing the overhead cost to a
 
 ## EX 4: Overhead cost - Less doing
 
-Finally, since we are only returning the coefficients, we can use a lighter version of `lm` called `lm.fit`.
+Since we only get coefficients, we can use a lighter version of `lm` called `lm.fit`.
 
 ```{r}
 #| label: overhead-cost-lm-fit-lite
 #| echo: true
 cl <- makePSOCKcluster(4)
-clusterExport(cl, c("X", "y"))
 X1 <- cbind(1, X)
-cost_pll_lite <- system.time(
-  parLapply(cl, 1:ncol(X), function(i) coef(lm.fit(y = y, x=X[,c(1, i),drop=FALSE]))
+clusterExport(cl, c("X1", "y"))
+cost_pll_lite <- system.time({
+  parLapply(cl, 1:ncol(X), function(i) coef(lm.fit(y = y, x=X1[,c(1, i),drop=FALSE]))
   )
-)
+})
 
 # Stopping the cluster
 stopCluster(cl)
 ```
 
+::: {style="font-size:70%"}
 ```{r}
 #| label: overhead-cost-output-table-lite
 #| echo: false
@@ -683,6 +686,8 @@ data.frame(
   check.names = FALSE
   ) |> t() |> knitr::kable()
 ```
+
+:::
 
 ::: {.callout-tip title="Pro-tip"}
 Using a Fork cluster instead of a PSOCK cluster can further reduce the overhead cost. Both `X` and `y` would have been automatically available in the Fork cluster at 0 cost.
