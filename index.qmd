@@ -1,9 +1,9 @@
 ---
 title: A Brief Introduction to High-Performance Computing
-subtitle: With Applications in R
+subtitle: With Applications in R<br><br>University of Exeter
 author: George G. Vega Yon, Ph.D.
 institute: University of Utah, EEUU
-date: 2024-08-23
+date: 2024-09-04
 format:
   revealjs:
     slide-number: true
@@ -13,6 +13,7 @@ format:
     fig-dpi: 200
     fig-asp: 1
     css: ["default", "style.css"]
+    footer: George G. Vega Yon, Ph.D. -- [ggv.cl/slides/hpc-exeter-sep2024](ggv.cl/slides/hpc-exeter-sep2024)
     title-slide-attributes: 
       data-background-image: 'fig/Zoom-Background_PrideU.jpg'
       data-background-opacity: '0.2'
@@ -20,6 +21,14 @@ format:
 bibliography: references.bib
 embed-resources: true
 ---
+
+## Before we start
+
+You can access the content here:
+
+- Slides: <https://ggv.cl/slides/exeter-hpc-2024>
+- Code: <https://github.com/gvegayon/exeter-hpc-sep2024>
+- posit.cloud: <https://ggv.cl/cloud/exeter-hpc-2024>
 
 # Fundamentals {background-color="#515A5A"}
 
@@ -81,41 +90,41 @@ parallel::detectCores()
 
 ## What is parallel computing? 
 
+::: {.columns}
+::: {.column width="40%"}
 ```r
 f <- function(n) n*2
 
 f(1:4)
 ```
 
-::: {.columns}
-::: {.column width="40%"}
 - Using a single core.
 - One element at a time.
 - 3 idle cores.
 :::
 ::: {.column width="60%"}
-![](fig/pll-computing-explained-serial.svg){width=80%}
+![](fig/pll-computing-explained-serial.svg){width=450px}
 :::
 :::
 
 
 ## What is parallel computing? 
 
+::: {.columns}
+::: {.column width="40%"}
 ```r
 f <- function(n) n*2
 f_pll <- ...magic to parallelize f...
 f_pll(1:4)
 ```
 
-::: {.columns}
-::: {.column width="40%"}
 - Using 4 cores.
 - 4 elements at a time.
 - No idle cores.
 - 4 times faster.
 :::
 ::: {.column width="60%"}
-![](fig/pll-computing-explained-parallel.svg){width=80%}
+![](fig/pll-computing-explained-parallel.svg){width=450px}
 :::
 :::
 
