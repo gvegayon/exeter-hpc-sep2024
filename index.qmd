@@ -173,6 +173,14 @@ When in doubt, **profile** your code first! In R, you can use the [`profvis`](ht
 [^whenmatrix]: Parallelization of matrix operations is usually done via SIMD instructions, like those in GPUs and some CPUs. Most cases it applies via implicit parallelism (not at the user level).
 :::
 
+::: {.fragment .incremental}
+Good example usage case:
+
+- Large simulation study running ABMs.
+- It took about **30 minutes** using R + the parallel package... using 50 threads!
+- It would have taken about 30 mins x 50 = **24 hours using a single thread**. 
+:::
+
 ## Overhead cost
 
 ::: {style="font-size:80%"}
