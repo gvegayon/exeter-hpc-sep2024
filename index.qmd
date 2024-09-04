@@ -12,7 +12,11 @@ format:
     fig-format: svg
     fig-dpi: 200
     fig-asp: 1
-    theme: solarized
+    css: ["default", "style.css"]
+    title-slide-attributes: 
+      data-background-image: 'fig/Zoom-Background_PrideU.jpg'
+      data-background-opacity: '0.2'
+      data-background-size: 'contain'
 bibliography: references.bib
 embed-resources: true
 ---
@@ -51,9 +55,9 @@ Supercomputer (HPC Cluster)
 ![The Exascale-class HPE Cray EX Supercomputer at Oak Ridge National Laboratory (fastest as of June 2024)](https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Frontier_Supercomputer_%282%29.jpg/585px-Frontier_Supercomputer_%282%29.jpg){width=80%}
 :::
 ::: {.column width="33%"}
-Single Instruction, Multiple Data (SIMD)
+Embarassingly Parallel
 
-![Vadikus, CC BY-SA 4.0 <https://creativecommons.org/licenses/by-sa/4.0>, via Wikimedia Commons](https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/SIMD2.svg/466px-SIMD2.svg.png){width=80%}
+![Downloaded from [Manning's "Modern Fortran"](https://livebook.manning.com/concept/fortran/addition)](fig/embarrasingly-parallel.png){width=80%}
 :::
 :::
 
@@ -126,19 +130,31 @@ f_pll(1:4)
 
 ## When is it a good idea? 
 
-![Ask yourself these questions before jumping into HPC!](fig/when_to_parallel.svg){fig-align="center" fig-alt="Ask yourself these questions before jumping into HPC!" width="65%"}
+::: {.columns}
 
+::: {.column width="70%"}
+![Ask yourself these questions before jumping into HPC!](fig/when_to_parallel.svg){fig-align="center" width="100%"}
+:::
+
+::: {.column width="30%"}
+::: {.callout-tip title="Pro-tip" .fragment}
+When in doubt, **profile** your code first! In R, you can use the [`profvis`](https://cran.r-project.org/package=profvis) package. which will give you a visual representation of where your code is spending most of the time.
+:::
+:::
+
+:::
 
 ## When is it a good idea?
 
-Things that are easily parallelizable:
+::: {layout-ncol="2"}
+### Things that are easily parallelizable
 
 - Bootstrapping.
 - Cross-validation.
 - Monte Carlo simulations.
 - Multiple MCMC chains.
 
-Things that are not easily parallelizable:
+### Things that are not easily parallelizable
 
 - Regression models.
 - Within Chain MCMC.
@@ -146,6 +162,7 @@ Things that are not easily parallelizable:
 - Any sequential algorithm.
 
 [^whenmatrix]: Parallelization of matrix operations is usually done via SIMD instructions, like those in GPUs and some CPUs. Most cases it applies via implicit parallelism (not at the user level).
+:::
 
 ## Overhead cost
 
@@ -231,7 +248,7 @@ timing_parallel_lm_lite<- do.call(rbind, timing_parallel_lm_lite) |> data.frame(
 palette(hcl.colors(8, "viridis"))
 
 # Visualize
-op <- par(cex=1.5, mai = par("mai") * c(1.5,1.5,0,0))
+op <- par(cex=1.25, mai = par("mai") * c(1.5,1.5,0,0))
 maxy <- range(c(timing_serial_lm_all[, "elapsed"], timing_parallel_lm_all[, "elapsed"], timing_parallel_lm[, "elapsed"], timing_parallel_lm_lite[, "elapsed"]))
 
 plot(timing_serial_lm_all[, "elapsed"] ~ nvars, type="b", col=1, pch=19, xlab="Number of variables", ylab="Time (ms) (log-scale)", lty=1, ylim=maxy, log="y", lwd=4)
@@ -348,20 +365,25 @@ Using PSOCK, the [`slurmR`](https://cran.r-project.org/package=slurmR){target="_
 ```{r}
 #| label: parallel-ex-psock
 #| echo: true
+#| code-line-numbers: "|2,3|6,7,8|11,12,13"
 # 1. CREATING A CLUSTER
 library(parallel)
 cl <- makePSOCKcluster(4)    
-x  <- 20
 
 # 2. PREPARING THE CLUSTER
 clusterSetRNGStream(cl, 123) # Equivalent to `set.seed(123)`
+x  <- 20
 clusterExport(cl, "x")
 
 # 3. DO YOUR CALL
 clusterEvalQ(cl, {
   paste0("Hello from process #", Sys.getpid(), ". x = ", x)
 })
+```
 
+```{r}
+#| code-line-numbers: "|2"
+#| echo: true
 # 4. STOP THE CLUSTER
 stopCluster(cl)
 ```
@@ -397,39 +419,54 @@ str(y)
 #| label: lots-of-lm-serial
 #| echo: true
 #| strip-white: false
- 
- 
-ans <- apply(
+#| code-annotations: hover
+#| output-location: column
+#| collapse: true
+
+
+ans <- apply( # <1> 
   
   X      = X,
-  MARGIN = 2,
-  FUN    = function(x, y) coef(lm(y ~ x)),
-  y      = y
+  MARGIN = 2, # <2>
+  FUN    = function(x, y) coef(lm(y ~ x)), # <3>
+  y      = y # <4>
   )
 
-ans[,1:5]
+ans[,1:3]
 ```
+1. Apply calls a function over rows or columns of a matrix.
+2. We are applying over columns of `X`.
+3. The function fits a linear model (`lm`) and returns the coefficients (`coef`).
+4. Since the function also depends on `y`, we pass it as an argument.
 
 ## Ex 2: Regressions - Parallel
 
 ```{r}
 #| label: lots-of-lm-parallel
 #| echo: true
-cl <- parallel::makePSOCKcluster(4L)
-ans <- parallel::parApply(
-  cl     = cl,
+#| output-location: column
+#| collapse: true
+cl <- parallel::makePSOCKcluster(4L) # <1>
+ans <- parallel::parApply(           # <2>
+  cl     = cl,                       # <3>
   X      = X,
   MARGIN = 2,
   FUN    = function(x, y) coef(lm(y ~ x)),
   y      = y
   )
 
-ans[,1:5]
+ans[,1:3]
 ```
+1.  Creating a cluster with 4 cores.
+2.  Replacing `apply` with `parApply`.
+3.  Passing the cluster object to `parApply`.
+
+Both results should be the same.
+
 
 -----
 
-Are we going any faster?
+Are we going any faster? The `microbenchmark` package can help us with that:
 
 ```{r}
 #| label: lots-of-lm-bench
@@ -589,6 +626,7 @@ Let's start with the naive approach: fitting the model and returning the full ou
 #| label: overhead-cost-run
 #| echo: true
 #| cache: true
+#| code-line-numbers: "|2,7"
 library(parallel)
 cost_serial <- system.time(lapply(1:ncol(X), function(i) lm(y ~ X[,i])))
 
@@ -604,6 +642,7 @@ stopCluster(cl)
 ```{r}
 #| label: overhead-cost-output-table-naive
 #| echo: false
+#| code-line-numbers: "|2,7"
 data.frame(
   Serial           = cost_serial["elapsed"],
   `Parallel naive` = cost_pll["elapsed"],
@@ -630,6 +669,7 @@ Instead of capturing the full output, we can just return the coefficients.
 ```{r}
 #| label: overhead-cost-coef-only
 #| echo: true
+#| code-line-numbers: "4"
 cl <- makePSOCKcluster(4)
 clusterExport(cl, c("X", "y"))
 cost_pll_coef <- system.time(
@@ -654,13 +694,14 @@ data.frame(
 
 The coefficients are much smaller, significantly reducing the overhead cost to about `r format(ncol(X) * object.size(coef(lm(y ~ X[,1]))[1]), units="MB")`.
 
-## EX 4: Overhead cost - Less doing
+## Ex 4: Overhead cost - Less doing
 
 Since we only get coefficients, we can use a lighter version of `lm` called `lm.fit`.
 
 ```{r}
 #| label: overhead-cost-lm-fit-lite
 #| echo: true
+#| code-line-numbers: "5"
 cl <- makePSOCKcluster(4)
 X1 <- cbind(1, X)
 clusterExport(cl, c("X1", "y"))
@@ -693,12 +734,28 @@ data.frame(
 Using a Fork cluster instead of a PSOCK cluster can further reduce the overhead cost. Both `X` and `y` would have been automatically available in the Fork cluster at 0 cost.
 :::
 
+## Conclusion
+
+::: {.incremental}
+
+- Parallel computing is a powerful tool to speed up your ~R~ code.
+
+- It's not always the best solution, **you have to think first!**
+
+- In R the `parallel` package is a good starting point for explicit parallelism.
+
+- When parallelizing, think about the overhead cost and how to "do less":
+  1. Reduce the amount of data communicated (send/receive).
+  2. Pass only what you need (*i.e.*, communicated data x2).
+  3. Use lighter versions of functions when possible.
+:::
 
 ## {style="text-align:center!important;"}
 
 ```{r thanks, out.width="300px", echo=FALSE}
 knitr::include_graphics("fig/speed.gif")
 ```
+
 
 ### Thanks!
 
